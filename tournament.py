@@ -7,31 +7,28 @@ import psycopg2
 
 def connect():
     """Connect to the PostgreSQL database.  Returns a database connection."""
-    return psycopg2.connect("dbname=tournament")
+    db = psycopg2.connect("dbname=tournament")
+    cursor = db.cursor()
+    return db, cursor
 
 
 def deleteMatches():
     """Remove all the match records from the database."""
-    conn = psycopg2.connect("dbname = tournament")
-    c = conn.cursor()
+    conn, c = connect()
     c.execute("delete from matches;")
-    c.execute('''UPDATE players
-                    SET wins = 0, matches = 0, losses = 0''')
     conn.commit()
     return conn.close()
 
 def deletePlayers():
     """Remove all the player records from the database."""
-    conn = psycopg2.connect("dbname = tournament")
-    c = conn.cursor()
+    conn, c = connect()
     c.execute("delete from players;")
     conn.commit()
     return conn.close()
 
 def countPlayers():
     """Returns the number of players currently registered."""
-    conn = psycopg2.connect("dbname = tournament")
-    c = conn.cursor()
+    conn, c = connect()
     c.execute("select count(*) from players;")
     num = c.fetchone()
     conn.close()
@@ -46,10 +43,9 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
-    conn = psycopg2.connect("dbname = tournament")
-    c = conn.cursor()
-    c.execute('''INSERT INTO players (name, wins, losses, matches) 
-        VALUES (%s, 0, 0, 0);''', (name,))
+    conn, c = connect()
+    c.execute('''INSERT INTO players (name) 
+        VALUES (%s);''', (name,))
     conn.commit()
     return conn.close()
 
@@ -66,9 +62,11 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-    conn = psycopg2.connect("dbname = tournament")
-    c = conn.cursor()
-    c.execute("select id, name, wins, matches from players order by wins;")
+    conn, c = connect()
+    c.execute('''SELECT wintracker.*, totalmatches.total
+                    FROM wintracker, totalmatches
+                    WHERE totalmatches.id = wintracker.id
+                    ORDER BY wintracker.wins;''')
     standings = c.fetchall()
     conn.close()
     return standings
@@ -80,16 +78,9 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
-    conn = psycopg2.connect("dbname = tournament")
-    c = conn.cursor()
+    conn, c = connect()
     c.execute('''INSERT INTO matches (winner, loser) 
                     VALUES (%s,%s);''', (winner, loser,))
-    c.execute('''UPDATE players
-                    SET wins = wins + 1, matches = matches + 1
-                WHERE id = (%s);''', (winner,))
-    c.execute('''UPDATE players
-                    SET losses = losses + 1, matches = matches + 1
-                WHERE id = (%s);''', (loser,))
     conn.commit()
     return conn.close() 
  
