@@ -12,7 +12,8 @@ CREATE DATABASE tournament;
 
 CREATE TABLE players(id serial PRIMARY KEY, name text);
 CREATE TABLE matches(match_num serial PRIMARY KEY, 
-	winner int REFERENCES players(id), loser int REFERENCES players(id));
+	winner int REFERENCES players(id) ON DELETE CASCADE,
+	loser int REFERENCES players(id) ON DELETE CASCADE);
 
 CREATE VIEW wintracker 
 AS
@@ -21,6 +22,7 @@ AS
 	FROM players
 		LEFT JOIN matches
 				ON players.id = matches.winner
+	GROUP BY players.id
 	ORDER BY wins;
 
 CREATE VIEW losstracker
@@ -30,6 +32,7 @@ AS
 	FROM players
 		LEFT JOIN matches
 				ON players.id = matches.loser
+	GROUP BY players.id
 	ORDER BY losses;
 
 CREATE VIEW totalmatches
@@ -39,4 +42,5 @@ AS
 	FROM players
 		LEFT JOIN matches
 				ON players.id = matches.winner or players.id = matches.loser
+	GROUP BY players.id
 	ORDER BY total;
